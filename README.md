@@ -1,14 +1,59 @@
 # Drotek MPU-9250 AHRS
 
-This project is a review of the work done on this [github repo](https://github.com/shubhampaul/Real_Time_Planet_Tracking_System.git).
-
 ## Hardware 
  
 * [Drotek MPU-9250](https://drotek.com/shop/fr/drotek-parts/421-mpu9250-gyro-accelerometre-magnetometre.html)
  
-## How to use
+## Sketches
  
-* [Geomagnetic Declination](https://www.ngdc.noaa.gov/geomag-web/)
+### arduino/MPU9250BasicAHRS
+
+This project is a review of the work done on this [github repo](https://github.com/shubhampaul/Real_Time_Planet_Tracking_System.git).
+
+It will send out via Serial the following information:
+```
+uint32_t delta;								// Time delta between measurements
+float ax;									// Acceleration X
+float ay;									// Acceleration Y
+float az;									// Acceleration Y
+float gx;									// Gyroscope X
+float gy;									// Gyroscope Y
+float gz;									// Gyroscope Z
+float mx;									// Magnetometer X
+float my;									// Magnetometer Y
+float mz;									// Magnetometer Z
+float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};  	// Quaternion
+float pitch;								// Pitch
+float yaw;									// Yaw
+float roll;                                 // Roll
+```
+
+Few customizations can be made.
+Follow instructions in source code for wiring.
+
+```
+
+// MPU9250 Breakout -------- Arduino
+// 5V  --------------------- 5V
+// GND --------------------- GND
+// SCL --------------------- A5
+// SDA --------------------- A4
+
+// Set this to x to enable debug mode
+#define DEBUG_MODE(x)  
+// Define this to enable ASCII output via Serial
+#define ASCII_MODE
+// Define this to enable BIN output via Serial
+//#define BIN_MODE
+// Define this to enable AHRS
+#define AHRS
+// Geomagnetic declination to be checked on https://www.ngdc.noaa.gov/geomag-web/
+#define MAGNETIC_DECLINATION 1.5f
+```
+
+### I2CScanner
+
+Useful Arduino sketch to verify if I2C devices are found and their addresses.
 
 ## Useful links
 

@@ -25,7 +25,7 @@
  - We are also using the 400 kHz fast I2C mode by setting the TWI_FREQ  to 400000L /twi.h utility file.
 */
 
-// Set this to x to enable debug mode
+// Set this to x to enable debug mode (additional info)
 #define DEBUG_MODE(x)  
 // Define this to enable ASCII output via Serial
 #define ASCII_MODE
@@ -33,6 +33,8 @@
 //#define BIN_MODE
 // Define this to enable AHRS
 #define AHRS
+// Geomagnetic declination to be checked on https://www.ngdc.noaa.gov/geomag-web/
+#define MAGNETIC_DECLINATION 1.5f
 
 #include <SPI.h>
 #include <Wire.h>
@@ -468,7 +470,7 @@ void loop()
       values.roll = atan2(2.0f * (values.q[0] * values.q[1] + values.q[2] * values.q[3]), values.q[0] * values.q[0] - values.q[1] * values.q[1] - values.q[2] * values.q[2] + values.q[3] * values.q[3]);
       values.pitch *= 180.0f / PI;
       values.yaw *= 180.0f / PI;
-      values.yaw -= 1.5f; //13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
+      values.yaw -= MAGNETIC_DECLINATION;
       values.roll *= 180.0f / PI;
 
       values.delta = delt_t;
