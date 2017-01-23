@@ -35,6 +35,8 @@
 #define AHRS
 // Geomagnetic declination to be checked on https://www.ngdc.noaa.gov/geomag-web/
 #define MAGNETIC_DECLINATION 1.5f
+// Serial baud rate
+#define SERIAL_BAUD_RATE 115200
 
 #include <SPI.h>
 #include <Wire.h>
@@ -285,8 +287,8 @@ Sensor_t values;
 void setup()
 {
     Wire.begin();
-    //  TWBR = 12;  // 400 kbit/sec I2C speed
-    Serial.begin(115200);
+    Wire.setClock(400000L);
+    Serial.begin(SERIAL_BAUD_RATE);
 
     // Set up the interrupt pin, its set as active high, push-pull
     pinMode(intPin, INPUT);

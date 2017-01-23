@@ -49,9 +49,11 @@ Follow instructions in source code for wiring.
 #define AHRS
 // Geomagnetic declination to be checked on https://www.ngdc.noaa.gov/geomag-web/
 #define MAGNETIC_DECLINATION 1.5f
+// Serial baud rate
+#define SERIAL_BAUD_RATE 115200
 ```
 
-### I2CScanner
+### arduino/I2CScanner
 
 Useful Arduino sketch to verify if I2C devices are found and their addresses.
 
