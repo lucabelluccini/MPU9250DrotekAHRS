@@ -4,7 +4,7 @@
 void setup()
 {
   Wire.begin();
- 
+  //Wire.begin(D1,D2); // D1 to SDA, D2 to SCL for NodeMCU ESP 12-E V1.0
   Serial.begin(9600);
   Serial.println("\nI2C Scanner");
 }

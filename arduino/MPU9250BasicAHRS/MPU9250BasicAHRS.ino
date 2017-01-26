@@ -11,38 +11,56 @@
  getting properly scaled accelerometer, gyroscope, and magnetometer data out. Added display functions to 
  allow display to on breadboard monitor. Addition of 9 DoF sensor fusion using open source Madgwick and 
  Mahony filter algorithms.
+
+ See also MPU-9250 Register Map and Descriptions, Revision 4.0, RM-MPU-9250A-00, Rev. 1.4, 9/9/2013 for registers not listed in 
+ above document; the MPU9250 and MPU9150 are virtually identical but the latter has a different register map
  
  Hardware setup
+ ==============
  
- MPU9250 Breakout -------- Arduino
- 5V  --------------------- 5V
- GND --------------------- GND
- SCL --------------------- A5
- SDA --------------------- A4
+ MPU9250 Breakout ---- Arduino ---- ESP8266 (E.g. NodeMCU ESP 12-E V1.0)
+ 5V  ----------------- 5V --------- 3.3V
+ GND ----------------- GND -------- GND
+ SCL ----------------- A5 --------- D2
+ SDA ----------------- A4 ----------D1
  
  Note:
  - The MPU9250 is an I2C sensor and uses the Arduino Wire library. 
- - We are also using the 400 kHz fast I2C mode by setting the TWI_FREQ  to 400000L /twi.h utility file.
+ 
 */
 
 // Set this to x to enable debug mode (additional info)
-#define DEBUG_MODE(x)  
-// Define this to enable ASCII output via Serial
-#define ASCII_MODE
-// Define this to enable BIN output via Serial
-//#define BIN_MODE
+#define DEBUG_MODE(x)
 // Define this to enable AHRS
 #define AHRS
 // Geomagnetic declination to be checked on https://www.ngdc.noaa.gov/geomag-web/
 #define MAGNETIC_DECLINATION 1.5f
 // Serial baud rate
 #define SERIAL_BAUD_RATE 115200
+// Define this to enable ESP8266 features
+#define USING_ESP8266
+// Define this to enable UDP
+#define USING_UDP
+
+#define WIDTH 2
+#define DECIMAL_PLACES 3
 
 #include <SPI.h>
 #include <Wire.h>
-// See also MPU-9250 Register Map and Descriptions, Revision 4.0, RM-MPU-9250A-00, Rev. 1.4, 9/9/2013 for registers not listed in
-// above document; the MPU9250 and MPU9150 are virtually identical but the latter has a different register map
-//
+
+#if defined(USING_ESP8266) && defined(USING_UDP)
+
+#include <ESP8266WiFi.h>
+#include <WiFiUDP.h>
+// Create a file declaring and defining the following variables
+// const char* ssid     = "";
+// const char* password = "";
+#include "WiFiCredentials.h"
+WiFiUDP udpClient;
+
+#endif
+
+
 //Magnetometer Registers
 #define AK8963_ADDRESS 0x0C
 #define WHO_AM_I_AK8963 0x00 // should return 0x48
@@ -284,11 +302,39 @@ struct __attribute__ ((packed)) Sensor_t {
 
 Sensor_t values;
 
+#ifdef USING_UDP
+void connect_to_wifi()
+{
+    WiFi.mode(WIFI_STA);
+    WiFi.setOutputPower(0);
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      DEBUG_MODE(Serial.print("."));
+    }
+    DEBUG_MODE(Serial.print("WiFi connected! Local IP address: "));
+    DEBUG_MODE(Serial.print(WiFi.localIP()));
+    DEBUG_MODE(Serial.print(" Gateway IP address: "));
+    DEBUG_MODE(Serial.println(WiFi.gatewayIP()));
+}
+#endif
+
 void setup()
 {
-    Wire.begin();
-    Wire.setClock(400000L);
     Serial.begin(SERIAL_BAUD_RATE);
+
+#ifdef USING_ESP8266
+    Wire.begin(D1,D2);
+    
+#ifdef USING_UDP
+    connect_to_wifi();
+#endif
+
+#else
+    Wire.begin();
+#endif
+
+    Wire.setClock(400000L);
 
     // Set up the interrupt pin, its set as active high, push-pull
     pinMode(intPin, INPUT);
@@ -386,6 +432,9 @@ void setup()
         while (1)
             ; // Loop forever if communication doesn't happen
     }
+
+    
+    
 }
 
 void loop()
@@ -443,7 +492,6 @@ void loop()
         delt_t = millis() - count;
         if (delt_t > 500)
         {
-
             tempCount = readTempData();                       // Read the adc values
             temperature = ((float)tempCount) / 333.87 + 21.0; // Temperature in degrees Centigrade
             // Print temperature in degrees Centigrade
@@ -477,28 +525,68 @@ void loop()
 
       values.delta = delt_t;
 
-      #ifdef ASCII_MODE
-        Serial.print(values.delta); Serial.print(F("\t"));
-        Serial.print(values.ax * 1000);Serial.print(F("\t"));
-        Serial.print(values.ay * 1000);Serial.print(F("\t"));
-        Serial.print(values.az * 1000);Serial.print(F("\t"));
-        Serial.print(values.gx);Serial.print(F("\t"));
-        Serial.print(values.gy);Serial.print(F("\t"));
-        Serial.print(values.gz);Serial.print(F("\t"));
-        Serial.print(values.mx);Serial.print(F("\t"));
-        Serial.print(values.my);Serial.print(F("\t"));
-        Serial.print(values.mz);Serial.print(F("\t"));
-        Serial.print(values.q[0]);Serial.print(F("\t"));
-        Serial.print(values.q[1]);Serial.print(F("\t"));
-        Serial.print(values.q[2]);Serial.print(F("\t"));
-        Serial.print(values.q[3]);Serial.print(F("\t"));
-        Serial.print(values.yaw);Serial.print(F("\t"));
-        Serial.print(values.pitch);Serial.print(F("\t"));
-        Serial.print(values.roll);Serial.println(F(""));
-      #endif
+      
+      String out = String(values.delta);
 
-      #ifdef BIN_MODE
-        Serial.write((uint8_t*) &values, sizeof(Sensor_t)); Serial.write('\n');
+      #if defined(USING_ESP8266) && defined(USING_UDP)
+
+      char tmpBuff[20];
+      udpClient.beginPacket(WiFi.gatewayIP(), 9999);
+      sprintf(tmpBuff, "%d\t\0", values.delta);
+      udpClient.write(tmpBuff, strlen(tmpBuff));
+      udpClient.write(dtostrf(values.ax * 1000, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.ay * 1000, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.az * 1000, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.gx, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.gy, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.gz, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.mx, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.my, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.mz, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.q[0], WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.q[1], WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.q[2], WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.q[3], WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.yaw, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.pitch, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\t", 1);
+      udpClient.write(dtostrf(values.roll, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));
+      udpClient.write("\n", 1);
+      udpClient.endPacket();
+
+      #else
+
+      Serial.print(values.ax * 1000, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.ay * 1000, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.az * 1000, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.gx, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.gy, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.gz, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.mx, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.my, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.mz, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.q[0], DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.q[1], DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.q[2], DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.q[3], DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.yaw, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.pitch, DECIMAL_PLACES);Serial.print(F("\t"));
+      Serial.print(values.roll, DECIMAL_PLACES);Serial.println(F(""));
+      
       #endif
       
       DEBUG_MODE(Serial.print((float) sumCount / sum, 2); Serial.println(" Hz"));
