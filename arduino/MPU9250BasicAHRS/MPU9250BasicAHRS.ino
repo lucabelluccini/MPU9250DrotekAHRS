@@ -29,7 +29,7 @@
  
 */
 
-// Set this to x to enable debug mode (additional info)
+// Set this to x to enable debug mode
 #define DEBUG_MODE(x)
 // Define this to enable AHRS
 #define AHRS
@@ -37,13 +37,17 @@
 #define MAGNETIC_DECLINATION 1.5f
 // Serial baud rate
 #define SERIAL_BAUD_RATE 115200
-// Define this to enable ESP8266 features
+// Define this to enable support for ESP8266 features
 #define USING_ESP8266
 // Define this to enable UDP
 #define USING_UDP
-
-#define WIDTH 2
+// Define this to set the UDP PORT
+#define UDP_PORT 9999
+// Minimum width of float string conversion
+#define WIDTH 3
+// Decimal places rounding for float conversion to text
 #define DECIMAL_PLACES 3
+
 
 #include <SPI.h>
 #include <Wire.h>
@@ -531,7 +535,7 @@ void loop()
       #if defined(USING_ESP8266) && defined(USING_UDP)
 
       char tmpBuff[20];
-      udpClient.beginPacket(WiFi.gatewayIP(), 9999);
+      udpClient.beginPacket(WiFi.gatewayIP(), UDP_PORT);
       sprintf(tmpBuff, "%d\t\0", values.delta);
       udpClient.write(tmpBuff, strlen(tmpBuff));
       udpClient.write(dtostrf(values.ax * 1000, WIDTH, DECIMAL_PLACES, tmpBuff), strlen(tmpBuff));

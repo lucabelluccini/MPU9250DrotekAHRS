@@ -3,6 +3,7 @@
 ## Hardware 
  
 * [Drotek MPU-9250](https://drotek.com/shop/fr/drotek-parts/421-mpu9250-gyro-accelerometre-magnetometre.html)
+* Arduino Nano, UNO or NodeMCU Doit.am ESP-12E 8266 (v1.0) have been tested
  
 ## Sketches
  
@@ -33,24 +34,31 @@ Follow instructions in source code for wiring.
 
 ```
 
-// MPU9250 Breakout -------- Arduino
-// 5V  --------------------- 5V
-// GND --------------------- GND
-// SCL --------------------- A5
-// SDA --------------------- A4
+MPU9250 Breakout ---- Arduino ---- ESP8266 (E.g. NodeMCU ESP 12-E V1.0)
+5V  ----------------- 5V --------- 3.3V
+GND ----------------- GND -------- GND
+SCL ----------------- A5 --------- D2
+SDA ----------------- A4 ----------D1
 
 // Set this to x to enable debug mode
 #define DEBUG_MODE(x)  
-// Define this to enable ASCII output via Serial
-#define ASCII_MODE
-// Define this to enable BIN output via Serial
-//#define BIN_MODE
 // Define this to enable AHRS
 #define AHRS
 // Geomagnetic declination to be checked on https://www.ngdc.noaa.gov/geomag-web/
 #define MAGNETIC_DECLINATION 1.5f
 // Serial baud rate
 #define SERIAL_BAUD_RATE 115200
+// Define this to enable support for ESP8266 features
+#define USING_ESP8266
+// Define this to enable UDP
+#define USING_UDP
+// Define this to set the UDP PORT
+#define UDP_PORT 9999
+// Minimum width of float string conversion
+#define WIDTH 3
+// Decimal places rounding for float conversion to text
+#define DECIMAL_PLACES 3
+
 ```
 
 ### arduino/I2CScanner
